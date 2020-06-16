@@ -32,6 +32,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     //タップ時のサウンド
     var player0:AVAudioPlayer?
+    var player1:AVAudioPlayer?
     
     
     
@@ -325,22 +326,42 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             }
         }
                 
+        //アイテムと鳥が衝突したとき
         else if ((contact.bodyA.categoryBitMask & itemCategory) == itemCategory || (contact.bodyB.categoryBitMask & itemCategory) == itemCategory) {
             print("アイテムGET")
             //以下上と同じ
-            print("ScoreUp")
+            print("ItemScoreUp")
             itemScore += 1
-            itemScoreLabelNode.text = "Score:\(itemScore)"
+            itemScoreLabelNode.text = "Item Score:\(itemScore)"
             
             var bestItemScore = userDefaults.integer(forKey: "BEST_ITEM")
             if (itemScore > bestItemScore){
                 bestItemScore = itemScore
-                bestScoreLabelNode.text = "Best Item Score: \(bestItemScore)"
+                bestItemScoreLabelNode.text = "Best Item Score: \(bestItemScore)"
                 userDefaults.set(bestItemScore, forKey: "BEST_ITEM")
                 userDefaults.synchronize()
             }
-            //アイテムを消す
-            SKAction.removeFromParent()
+            //効果音鳴らす
+            let soundURL = Bundle.main.url(forResource: "picon", withExtension: "mp3")
+            do {
+                player1 = try AVAudioPlayer(contentsOf: soundURL!)
+                player1?.play()
+            } catch {
+                print("error...")
+            }
+            
+            //アイテムを消す（アンラップしてから）
+            let removeThisItem = contact.bodyA.node!
+            removeThisItem.removeFromParent()
+            print("アイテムが消えた。")
+            //パーティクル出す
+            let path = Bundle.main.path(forResource: "MyParticle", ofType: "sks")!
+            let spk = NSKeyedUnarchiver.unarchiveObject(withFile:path) as! SKEmitterNode
+            spk.numParticlesToEmit = 10
+            spk.position.x = removeThisItem.position.x + 70
+            spk.position.y = removeThisItem.position.y
+            self.addChild(spk)
+            
         } else {
             print("GameOver")
             scrollNode.speed = 0
@@ -358,6 +379,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         score = 0
         scoreLabelNode.text = "Score:\(score)"
         
+        //アイテムスコアについて
+        itemScore = 0
+        itemScoreLabelNode.text = "Item Score:\(itemScore)"
+        
+        //鳥の位置リセット
         bird.position = CGPoint(x: self.size.width * 0.2, y: self.size.height * 0.7)
         bird.physicsBody?.velocity = CGVector.zero
         bird.physicsBody?.collisionBitMask = groundCategory | wallCategory
@@ -367,6 +393,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         bird.speed = 1
         scrollNode.speed = 1
+        
     }
     
     func setupScoreLabel() {
@@ -388,6 +415,26 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         let bestScore = userDefaults.integer(forKey: "BEST")
         bestScoreLabelNode.text = "Best Score:\(bestScore)"
         self.addChild(bestScoreLabelNode)
+        
+        //アイテムスコアについて
+        itemScore = 0
+        itemScoreLabelNode = SKLabelNode()
+        itemScoreLabelNode.fontColor = UIColor.black
+        itemScoreLabelNode.position = CGPoint(x: 10, y: self.frame.height-120)
+        itemScoreLabelNode.zPosition = 100
+        itemScoreLabelNode.horizontalAlignmentMode = SKLabelHorizontalAlignmentMode.left
+        itemScoreLabelNode.text = "Item Score:\(itemScore)"
+        self.addChild(itemScoreLabelNode)
+        
+        bestItemScoreLabelNode = SKLabelNode()
+        bestItemScoreLabelNode.fontColor = UIColor.black
+        bestItemScoreLabelNode.position = CGPoint(x: 10, y: self.frame.height-150)
+        bestItemScoreLabelNode.zPosition = 100
+        bestItemScoreLabelNode.horizontalAlignmentMode = SKLabelHorizontalAlignmentMode.left
+        
+        let bestItemScore = userDefaults.integer(forKey: "BEST_ITEM")
+        bestItemScoreLabelNode.text = "Best Item Score:\(bestItemScore)"
+        self.addChild(bestItemScoreLabelNode)
     }
 }
 
